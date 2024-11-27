@@ -1,0 +1,100 @@
+import time
+import board
+import busio
+import adafruit_bmp280
+import adafruit_scd30
+import paho.mqtt.client as mqtt
+import json
+
+# Configuration
+MQTT_BROKER = "192.168.1.176"  # Replace with your Pi 4's IP address
+MQTT_PORT = 1883
+MQTT_TOPICS = {
+    "temperature": "weather_station/temperature",
+    "humidity": "weather_station/humidity",
+    "pressure": "weather_station/pressure",
+    "co2": "weather_station/co2"
+}
+I2C_SCD30_ADDRESS = 0x61
+I2C_BMP280_ADDRESS = 0x77
+PUBLISH_INTERVAL = 10  # seconds
+
+# Initialize sensors
+def initialize_sensors():
+    i2c = busio.I2C(board.SCL, board.SDA)
+    bmp280 = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=I2C_BMP280_ADDRESS)
+    scd30 = adafruit_scd30.SCD30(i2c)
+
+    # Configure BMP280
+    bmp280.sea_level_pressure = 1013.25  # Adjust based on your location
+    return bmp280, scd30
+
+# MQTT connect callback
+def on_connect(client, userdata, flags, rc):
+    if rc == 0:
+        print("Connected to MQTT broker")
+    else:
+        print(f"Failed to connect, return code {rc}")
+
+# Read and publish data
+def read_and_publish(bmp280, scd30, client):
+    try:
+        # Read sensor data
+        temp_bmp = bmp280.temperature
+        pressure = bmp280.pressure
+
+        temp_scd = scd30.temperature
+        humidity = scd30.relative_humidity
+        co2 = scd30.CO2
+
+        # Print to console
+        print(f"BMP280 - Temperature: {temp_bmp:.2f}°C, Pressure: {pressure:.2f}hPa")
+        print(f"SCD30 - Temperature: {temp_scd:.2f}°C, Humidity: {humidity:.2f}%, CO2: {co2:.2f} ppm")
+
+        # Publish to MQTT if connected
+        if client:
+            client.publish(MQTT_TOPICS["temperature"], json.dumps({"value": temp_bmp}))
+            client.publish(MQTT_TOPICS["humidity"], json.dumps({"value": humidity}))
+            client.publish(MQTT_TOPICS["pressure"], json.dumps({"value": pressure}))
+            client.publish(MQTT_TOPICS["co2"], json.dumps({"value": co2}))
+        else:
+            print("MQTT not connected; skipping publish.")
+
+    except Exception as e:
+        print(f"Error reading sensors or publishing data: {e}")
+
+def main():
+    # Initialize MQTT client
+    client = None
+    try:
+        client = mqtt.Client()
+        client.on_connect = on_connect
+        client.connect(MQTT_BROKER, MQTT_PORT, 60)
+        client.loop_start()
+    except Exception as e:
+        print(f"MQTT connection failed: {e}")
+        client = None  # Set client to None if connection fails
+
+    # Initialize sensors
+    try:
+        bmp280, scd30 = initialize_sensors()
+    except Exception as e:
+        print(f"Failed to initialize sensors: {e}")
+        return
+
+    # Main loop
+    try:
+        while True:
+            read_and_publish(bmp280, scd30, client)
+            time.sleep(PUBLISH_INTERVAL)
+    except KeyboardInterrupt:
+        print("\nGracefully shutting down...")
+    finally:
+        # Ensure graceful MQTT shutdown
+        if client:
+            print("Stopping MQTT loop...")
+            client.loop_stop()
+            client.disconnect()
+
+if __name__ == "__main__":
+    main()
