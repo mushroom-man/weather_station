@@ -29,6 +29,7 @@ MQTT_TOPICS = {
 I2C_SCD30_ADDRESS = 0x61
 I2C_BMP280_ADDRESS = 0x77
 PUBLISH_INTERVAL = 10  # seconds
+BOX_ID = "box_1"  # Add your box ID here
 
 # Initialize sensors
 def initialize_sensors():
@@ -86,6 +87,7 @@ def read_and_publish(bmp280, scd30, sht31, client):
 
         # Prepare sensor data dictionary
         sensor_data = {
+            'box_id': BOX_ID,
             'external': {
                 'temperature': temp_bmp,
                 'pressure': pressure,
@@ -100,14 +102,14 @@ def read_and_publish(bmp280, scd30, sht31, client):
 
         # Publish external data
         if client:
-            client.publish(MQTT_TOPICS['external']['temperature'], json.dumps({'value': sensor_data['external']['temperature']}))
-            client.publish(MQTT_TOPICS['external']['pressure'], json.dumps({'value': sensor_data['external']['pressure']}))
-            client.publish(MQTT_TOPICS['external']['humidity'], json.dumps({'value': sensor_data['external']['humidity']}))
-            client.publish(MQTT_TOPICS['external']['co2'], json.dumps({'value': sensor_data['external']['co2']}))
+            client.publish(MQTT_TOPICS['external']['temperature'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['temperature']}))
+            client.publish(MQTT_TOPICS['external']['pressure'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['pressure']}))
+            client.publish(MQTT_TOPICS['external']['humidity'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['humidity']}))
+            client.publish(MQTT_TOPICS['external']['co2'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['co2']}))
 
             # Publish pre-con data
-            client.publish(MQTT_TOPICS['pre-con']['temperature'], json.dumps({'value': sensor_data['pre-con']['temperature']}))
-            client.publish(MQTT_TOPICS['pre-con']['humidity'], json.dumps({'value': sensor_data['pre-con']['humidity']}))
+            client.publish(MQTT_TOPICS['pre-con']['temperature'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['pre-con']['temperature']}))
+            client.publish(MQTT_TOPICS['pre-con']['humidity'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['pre-con']['humidity']}))
 
         # Log published data
         logging.info(f"Published sensor data: {sensor_data}")
