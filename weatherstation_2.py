@@ -11,7 +11,7 @@ import json
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s')
 
 # Configuration
-MQTT_BROKER = "192.168.1.176"  # Replace with your Pi 4's IP address
+MQTT_BROKER = "192.168.1.70"  # Replace with your Pi 4's IP address
 MQTT_PORT = 1883
 MQTT_TOPICS = {
     "external": {
