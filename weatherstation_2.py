@@ -85,10 +85,11 @@ def read_and_publish(bmp280, scd30, client):
 
         # Publish external data
         if client:
-            client.publish(MQTT_TOPICS['external']['temperature'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['temperature']}))
-            client.publish(MQTT_TOPICS['external']['pressure'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['pressure']}))
-            client.publish(MQTT_TOPICS['external']['humidity'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['humidity']}))
-            client.publish(MQTT_TOPICS['external']['co2'], json.dumps({'box_id': BOX_ID, 'value': sensor_data['external']['co2']}))
+            for key, topic in MQTT_TOPICS['external'].items():
+                value = sensor_data['external'][key]
+                payload = {'box_id': BOX_ID, 'value': value}
+                client.publish(topic, json.dumps(payload))
+                logging.debug(f"Published to {topic}: {payload}")
 
         # Log published data
         logging.info(f"Published sensor data: {sensor_data}")
